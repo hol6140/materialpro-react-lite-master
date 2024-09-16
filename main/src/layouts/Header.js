@@ -1,40 +1,67 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
 import {
   Navbar,
   Collapse,
-  Nav,
-  NavItem,
   NavbarBrand,
-  UncontrolledDropdown,
   DropdownToggle,
   DropdownMenu,
   DropdownItem,
   Dropdown,
   Button,
-} from "reactstrap";
-import Logo from "./Logo";
-import { ReactComponent as LogoWhite } from "../assets/images/logos/materialprowhite.svg";
-import user1 from "../assets/images/users/user4.jpg";
+} from 'reactstrap';
+import { ReactComponent as LogoWhite } from '../assets/images/logos/materialprowhite.svg';
+import user1 from '../assets/images/users/user4.jpg';
+import { useSelector, useDispatch } from 'react-redux';
+import { Link, useNavigate } from 'react-router-dom';
+
+import { initReduxAll } from '../components/common/InitRedux';
+import { setAlarmRead } from '../api/AlarmApi';
+import { setMyAlarmList, setMyAlarmCount } from '../store/Alarm';
+import { Badge, Avatar, Tag, Card } from 'antd';
+import moment from 'moment';
+import axios from 'axios';
 
 const Header = () => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const dispatch = useDispatch();
 
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
+  const navigate = useNavigate();
 
-  const toggle = () => setDropdownOpen((prevState) => !prevState);
+  const toggle = () => setDropdownOpen(prevState => !prevState);
+  const userInfo = useSelector(state => state.user.get('userInfo'));
+  const myAlarmCount = useSelector(state => state.alarm.get('alarmCount'));
+  const myAlarmList = useSelector(state => state.alarm.get('myAlarmList'));
   const Handletoggle = () => {
     setIsOpen(!isOpen);
   };
+  useEffect(() => {
+    if (dropdownOpen && myAlarmList) {
+      if (myAlarmList.find(item => item.readYn === 'N') === undefined) return;
+      setAlarmRead(sessionStorage.getItem('userId'))
+        .then(result => {
+          dispatch(setMyAlarmCount(0));
+        })
+        .catch(error => {
+          console.log('setAlarmRead >>>' + error);
+        });
+    }
+  }, [dropdownOpen]);
   const showMobilemenu = () => {
-    document.getElementById("sidebarArea").classList.toggle("showSidebar");
+    document.getElementById('sidebarArea').classList.toggle('showSidebar');
   };
+  const onClickLogOut = () => {
+    axios.defaults.headers.common['Authorization'] = '';
+
+    sessionStorage.clear();
+    initReduxAll(dispatch);
+    navigate('/');
+  };
+
   return (
     <Navbar color="primary" dark expand="md" className="fix-header">
       <div className="d-flex align-items-center">
-        <div className="d-lg-block d-none me-5 pe-3">
-          <Logo />
-        </div>
+        <div className="h4 text-white font-weight-bold">PET FRIENDS</div>
         <NavbarBrand href="/">
           <LogoWhite className=" d-lg-none" />
         </NavbarBrand>
@@ -60,51 +87,94 @@ const Header = () => {
           )}
         </Button>
       </div>
-
-      <Collapse navbar isOpen={isOpen}>
-        <Nav className="me-auto" navbar>
-          <NavItem>
-            <Link to="/starter" className="nav-link">
-              Starter
-            </Link>
-          </NavItem>
-          <NavItem>
-            <Link to="/about" className="nav-link">
-              About
-            </Link>
-          </NavItem>
-          <UncontrolledDropdown inNavbar nav>
-            <DropdownToggle caret nav>
-              DD Menu
-            </DropdownToggle>
-            <DropdownMenu end>
-              <DropdownItem>Option 1</DropdownItem>
-              <DropdownItem>Option 2</DropdownItem>
-              <DropdownItem divider />
-              <DropdownItem>Reset</DropdownItem>
-            </DropdownMenu>
-          </UncontrolledDropdown>
-        </Nav>
-        <Dropdown isOpen={dropdownOpen} toggle={toggle}>
-          <DropdownToggle color="transparent">
-            <img
-              src={user1}
-              alt="profile"
-              className="rounded-circle"
-              width="30"
-            ></img>
-          </DropdownToggle>
-          <DropdownMenu>
-            <DropdownItem header>Info</DropdownItem>
-            <DropdownItem>My Account</DropdownItem>
-            <DropdownItem>Edit Profile</DropdownItem>
-            <DropdownItem divider />
-            <DropdownItem>My Balance</DropdownItem>
-            <DropdownItem>Inbox</DropdownItem>
-            <DropdownItem>Logout</DropdownItem>
-          </DropdownMenu>
-        </Dropdown>
-      </Collapse>
+      {sessionStorage.getItem('userId') && (
+        <div className="align-items-right">
+          <Collapse navbar isOpen={isOpen}>
+            <Dropdown isOpen={dropdownOpen} toggle={toggle}>
+              <DropdownToggle color="transparent">
+                <Badge count={myAlarmCount || 0}>
+                  <img
+                    src={
+                      userInfo?.userImage
+                        ? `data:image/jpeg;base64,${userInfo.userImage}`
+                        : user1
+                    }
+                    alt="profile"
+                    className="rounded-circle"
+                    width="30"
+                  ></img>
+                </Badge>
+              </DropdownToggle>
+              <DropdownMenu>
+                {myAlarmList && (
+                  <>
+                    {myAlarmList?.map((item, index) => (
+                      <DropdownItem key={index}>
+                        {item.readYn === 'N' && (
+                          <Badge.Ribbon text="New" color="red">
+                            <Card title="알림" size="small">
+                              {item.message}
+                              <div className="alarmDateDiv">
+                                <span className="alarmDate">
+                                  {moment(item.regDate).format(
+                                    'YYYY-MM-DD HH:mm'
+                                  )}
+                                </span>
+                              </div>
+                            </Card>
+                          </Badge.Ribbon>
+                        )}
+                        {item.readYn === 'Y' && (
+                          <Card title="알림" size="small">
+                            {item.message}
+                            <div className="alarmDateDiv">
+                              <span className="alarmDate">
+                                {moment(item.regDate).format(
+                                  'YYYY-MM-DD HH:mm'
+                                )}
+                              </span>
+                            </div>
+                          </Card>
+                        )}
+                      </DropdownItem>
+                    ))}
+                    <DropdownItem divider />
+                  </>
+                )}
+                <DropdownItem style={{ textAlign: 'right' }}>
+                  <Link to="/profile">
+                    <span
+                      className="ms-3 d-inline-block"
+                      style={{ color: 'black' }}
+                    >
+                      Profile 사진 등록
+                    </span>
+                  </Link>
+                </DropdownItem>
+                <DropdownItem
+                  onClick={onClickLogOut}
+                  style={{ textAlign: 'right' }}
+                >
+                  Logout
+                </DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
+          </Collapse>
+        </div>
+      )}
+      {sessionStorage.getItem('userId') === null && (
+        <div className="align-items-right black">
+          <Link to="/login">
+            <i
+              className="bi bi-box-arrow-in-right"
+              style={{ color: 'black' }}
+            ></i>
+            <span className="ms-3 d-inline-block" style={{ color: 'black' }}>
+              Login
+            </span>
+          </Link>
+        </div>
+      )}
     </Navbar>
   );
 };

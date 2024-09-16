@@ -1,0 +1,14 @@
+.registbtndiv {
+  align-items: right;
+  text-align: right;
+  margin: 10px;
+}
+.registerBtn {
+  border-radius: 20px;
+  text-align: center;
+  align-items: center;
+}
+
+.dogWalkerList thead {
+  text-align: center;
+}

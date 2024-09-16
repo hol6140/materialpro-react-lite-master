@@ -1,82 +1,95 @@
-import { Col, Row } from "reactstrap";
-import SalesChart from "../components/dashboard/SalesChart";
-import Feeds from "../components/dashboard/Feeds";
-import ProjectTables from "../components/dashboard/ProjectTable";
+import { Col, Row } from 'reactstrap';
 
-import Blog from "../components/dashboard/Blog";
-import bg1 from "../assets/images/bg/bg1.jpg";
-import bg2 from "../assets/images/bg/bg2.jpg";
-import bg3 from "../assets/images/bg/bg3.jpg";
-import bg4 from "../assets/images/bg/bg4.jpg";
-
-const BlogData = [
-  {
-    image: bg1,
-    title: "This is simple blog",
-    subtitle: "2 comments, 1 Like",
-    description:
-      "This is a wider card with supporting text below as a natural lead-in to additional content.",
-    btnbg: "primary",
-  },
-  {
-    image: bg2,
-    title: "Lets be simple blog",
-    subtitle: "2 comments, 1 Like",
-    description:
-      "This is a wider card with supporting text below as a natural lead-in to additional content.",
-    btnbg: "primary",
-  },
-  {
-    image: bg3,
-    title: "Don't Lamp blog",
-    subtitle: "2 comments, 1 Like",
-    description:
-      "This is a wider card with supporting text below as a natural lead-in to additional content.",
-    btnbg: "primary",
-  },
-  {
-    image: bg4,
-    title: "Simple is beautiful",
-    subtitle: "2 comments, 1 Like",
-    description:
-      "This is a wider card with supporting text below as a natural lead-in to additional content.",
-    btnbg: "primary",
-  },
-];
-
+import MyDogwalkerList from '../components/myPage/MyDogwalkerList';
+import MyReserveList from '../components/myPage/MyReserveList';
+import bg1 from '../assets/images/bg/bg1.jpg';
+import bg2 from '../assets/images/bg/bg2.jpg';
+import bg3 from '../assets/images/bg/bg3.jpg';
+import bg4 from '../assets/images/bg/bg4.jpg';
+import { getMyReserveList, getMyDogwalkerList } from '../api/MypageApi';
+import {
+  setMyDogwalkerList,
+  setMyReserveList,
+  SET_MY_DOGWALKER_LIST_SAGA,
+  SET_MY_RESERVE_LIST_SAGA,
+} from '../store/Mypage';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { getMyWalk } from '../api/WalkApi';
+import { setMyWalkList } from '../store/Walk';
+import StarRank from '../components/dashboard/StarRank';
+import WalkRank from '../components/dashboard/WalkRank';
+import { getUserImg } from '../api/AuthApi';
 const Starter = () => {
+  const dispatch = useDispatch();
+  const myDogwalkerList = useSelector(state =>
+    state.mypage.get('myDogwalkerList')
+  );
+  const myReserveList = useSelector(state => state.mypage.get('myReserveList'));
+
+  useEffect(() => {
+    if (sessionStorage.getItem('userId') !== null) {
+      const userId = sessionStorage.getItem('userId');
+      getMyDogwalkerList(userId)
+        .then(result => {
+          dispatch(setMyDogwalkerList(result.data));
+          result.data.map(item => {
+            return userImgDogWalker(item.userId, item.reservedId);
+          });
+        })
+        .catch(error => {
+          console.log('getUserInfo Error');
+        });
+      getMyReserveList(userId)
+        .then(result => {
+          dispatch(setMyReserveList(result.data));
+          result.data.map(item => {
+            return userImgReservation(item.dogwalkerId, item.reservedId);
+          });
+        })
+        .catch(error => {
+          console.log('getMyReserveList Error');
+        });
+      getMyWalk(userId)
+        .then(result => {
+          dispatch(setMyWalkList(result.data));
+        })
+        .catch(error => {
+          console.log('getMyWalk Error');
+        });
+    }
+  }, [sessionStorage.getItem('userId')]);
+  const userImgDogWalker = (dogwalkerId, id) => {
+    dispatch({
+      type: SET_MY_DOGWALKER_LIST_SAGA,
+      data: { id: id, userId: dogwalkerId },
+    });
+  };
+  const userImgReservation = (userId, id) => {
+    dispatch({
+      type: SET_MY_RESERVE_LIST_SAGA,
+      data: { id: id, userId: userId },
+    });
+  };
   return (
     <div>
-      {/***Top Cards***/}
-
-      {/***Sales & Feed***/}
       <Row>
-        <Col sm="6" lg="6" xl="7" xxl="8">
-          <SalesChart />
+        <Col sm="6" lg="6" xl="6" xxl="6">
+          <StarRank />
         </Col>
-        <Col sm="6" lg="6" xl="5" xxl="4">
-          <Feeds />
+        <Col sm="6" lg="6" xl="6" xxl="6">
+          <WalkRank />
         </Col>
       </Row>
-      {/***Table ***/}
       <Row>
         <Col lg="12">
-          <ProjectTables />
+          <MyDogwalkerList />
         </Col>
       </Row>
-      {/***Blog Cards***/}
       <Row>
-        {BlogData.map((blg, index) => (
-          <Col sm="6" lg="6" xl="3" key={index}>
-            <Blog
-              image={blg.image}
-              title={blg.title}
-              subtitle={blg.subtitle}
-              text={blg.description}
-              color={blg.btnbg}
-            />
-          </Col>
-        ))}
+        <Col lg="12">
+          <MyReserveList />
+        </Col>
       </Row>
     </div>
   );
